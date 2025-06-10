@@ -1,4 +1,6 @@
-//Includes
+// Sistema de monitoreo ambiental y seguridad para Arduino
+
+// Sección de Inclusión de Librerías
 #include "StateMachineLib.h"
 #include "AsyncTaskLib.h"
 #include <LiquidCrystal.h>
@@ -9,7 +11,7 @@
 #include <SPI.h>
 #include <MFRC522.h>
 
-//Pin Definitions
+// Sección de Definición de Pines
 #define PIN_LED_RED 25
 #define PIN_LED_GREEN 23
 #define PIN_LED_BLUE 24
@@ -20,16 +22,16 @@
 #define PIN_VENTILADOR 6
 #define PIN_SERVO 10
 
-//RFID Configuration
+// Sección de Configuración RFID
 const int RST_PIN = 33;
 const int SS_PIN = 53;
 MFRC522 mfrc522(SS_PIN, RST_PIN);
 
-//LCD Configuration
+// Sección de Configuración de Pantalla LCD
 const int rs = 12, en = 11, d4 = 5, d5 = 4, d6 = 3, d7 = 2;
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 
-//Keypad Configuration
+// Sección de Configuración de Teclado Matricial
 const byte ROWS = 4;
 const byte COLS = 4;
 char keys[ROWS][COLS] = {
@@ -42,7 +44,7 @@ byte rowPins[ROWS] = { 28, 30, 32, 34 };
 byte colPins[COLS] = { 36, 38, 40, 42 };
 Keypad keypad = Keypad(makeKeymap(keys), rowPins, colPins, ROWS, COLS);
 
-//Function Prototypes
+// Sección de Prototipos de Funciones
 void readLuz();
 void readTemp();
 void readHumidity();
@@ -70,7 +72,7 @@ void readRFID();
 void printArray(byte* buffer, byte bufferSize);
 bool isEqualArray(byte* arrayA, byte* arrayB, int length);
 
-//Sensor Variables
+// Sección de Variables Globales para Datos de Sensores y Control de Tiempo
 int luzValue = 0;
 float tempValue = NAN;
 float humidityValue = NAN;
@@ -81,18 +83,19 @@ bool sensorsStable = false;
 unsigned long pmvBajoEnterTime = 0;
 const long PMV_BAJO_DURATION_MS = 4000;
 
-//PMV Lookup Table Data
+// Sección de Tabla de Valores PMV (Predicted Mean Vote)
 const float PMV_TABLE_TEMP[] = { 30.0, 29.0, 28.0, 27.0, 26.0, 25.0, 24.0, 23.0, 22.0, 21.0, 20.0, 19.0, 18.0, 29.5, 27.5, 25.5, 23.5, 21.5, 19.5, 20.5 };
 const float PMV_TABLE_HUM[] = { 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 80.0, 70.0, 60.0, 50.0, 40.0, 30.0, 20.0, 45.0, 65.0, 85.0, 75.0, 55.0, 35.0, 45.0 };
 const float PMV_TABLE_VALUE[] = { 2.9, 2.4, 1.9, 1.4, 0.9, 0.4, 0.0, 1.4, -0.9, -1.4, -1.9, -2.4, -2.9, 2.6, 1.6, 0.6, 1.2, -1.2, -2.2, -1.6 };
 const int PMV_TABLE_SIZE = 20;
 
-//PMV Variables
 float pmvValue = NAN;
+
+// Sección de UID para Tarjetas RFID
 byte tarjetaPMVBajo[4] = { 0x53, 0xF3, 0xD2, 0x2E };
 byte llaveroPMVAlto[4] = { 0x81, 0xAA, 0xE0, 0x26 };
 
-//Async Tasks
+// Sección de Declaración de Tareas Asíncronas
 AsyncTask TaskLuz(1000, true, readLuz);
 AsyncTask TaskTemp(2000, true, readTemp);
 AsyncTask TaskHumidity(2500, true, readHumidity);
@@ -104,7 +107,7 @@ AsyncTask TaskVentilador(7000, false, []() {
   Serial.println("Ventilador OFF (AsyncTask)");
 });
 
-//State Machine Definitions
+// Sección de Enumeración de Estados de la Máquina de Estados
 enum State {
   INIT = 0,
   MONITOREO_AMBIENTAL = 1,
@@ -114,6 +117,7 @@ enum State {
   PMV_BAJO = 5
 };
 
+// Sección de Enumeración de Entradas/Eventos para la Máquina de Estados
 enum Input {
   CLAVE_CORRECTA = 0,
   CLAVE_INCORRECTA = 1,
@@ -124,11 +128,9 @@ enum Input {
   PMV_BAJO_DETECTED = 6
 };
 
-//State Machine Initialization
 StateMachine stateMachine(6, 10);
-Input currentInput = NINGUNA;
 
-//Security Variables
+// Sección de Variables para Manejo de Contraseña y Bloqueo
 char password[] = "2269";
 char user_input[6] = "";
 unsigned char pass_idx = 0;
@@ -139,7 +141,7 @@ bool bloqueo_led_state = LOW;
 const long BLOQUEO_LED_ON_TIME = 500;
 const long BLOQUEO_LED_OFF_TIME = 200;
 
-//Alarm Variables
+// Sección de Variables para Control de Buzzer y Alarma
 unsigned long buzzerFreq = 200;
 unsigned long lastBuzzerChange = 0;
 const int BUZZER_FREQ_STEP = 50;
@@ -149,12 +151,16 @@ const long BUZZER_CHANGE_INTERVAL = 5;
 bool buzzerDirectionUp = true;
 unsigned long alarmaStartTime = 0;
 const long ALARMA_DURATION_MS = 5000;
+
+// Sección de Variables para Conteo de Alarmas
 int alarm_entry_count = 0;
 const int MAX_ALARM_ENTRIES = 3;
 unsigned long ledAlarmaBlinkMillis = 0;
 bool ledAlarmaState = LOW;
 const long ALARMA_LED_ON_MS = 200;
 const long ALARMA_LED_OFF_MS = 100;
+
+Input currentInput = NINGUNA;
 
 //State Machine Setup Function
 /**
@@ -166,6 +172,7 @@ const long ALARMA_LED_OFF_MS = 100;
  * 
  * @return No retorna ningún valor.
 */
+// Sección de Configuración de la Máquina de Estados (Transiciones y Callbacks)
 void setupStateMachine() {
   stateMachine.AddTransition(INIT, MONITOREO_AMBIENTAL, []() {
     return currentInput == CLAVE_CORRECTA;
@@ -177,7 +184,7 @@ void setupStateMachine() {
     return currentInput == DESBLOQUEO;
   });
   stateMachine.AddTransition(MONITOREO_AMBIENTAL, ALARMA, []() {
-    return sensorsStable && (luzValue < 100 || tempValue > 40.0);
+    return sensorsStable && (luzValue < 10 || tempValue > 40.0);
   });
   stateMachine.AddTransition(ALARMA, MONITOREO_AMBIENTAL, []() {
     return (millis() - alarmaStartTime >= ALARMA_DURATION_MS) && (alarm_entry_count < MAX_ALARM_ENTRIES);
@@ -223,6 +230,7 @@ void setupStateMachine() {
  * 
  * @return No retorna ningún valor.
 */
+// Sección de Funciones "onEnter" (al entrar a un estado)
 void onEnterInit() {
   lcd.clear();
   lcd.print("Ingrese clave:");
@@ -246,6 +254,7 @@ void onEnterInit() {
  * 
  * @return No retorna ningún valor.
 */
+// Sección de Funciones "onExit" (al salir de un estado)
 void onExitInit() {
   Serial.println("<- Saliendo de Init");
 }
@@ -259,17 +268,18 @@ void onExitInit() {
  * 
  * @return No retorna ningún valor.
 */
-
 void onEnterMonitoreo() {
   TaskVentilador.Stop();
   lcd.clear();
   lcd.print("Monitoreo activo");
   Serial.println("-> Estado Monitoreo: Monitoreo activo");
   digitalWrite(PIN_LED_GREEN, HIGH);
+
   TaskLuz.Start();
   TaskTemp.Start();
   TaskHumidity.Start();
   TaskPMV.Start();
+
   monitoreoEnterTime = millis();
   sensorsStable = false;
 }
@@ -336,7 +346,6 @@ void onEnterAlarma() {
   alarm_entry_count++;
   Serial.print("Alarmas activadas: ");
   Serial.println(alarm_entry_count);
-  Serial.println("DEBUG ALARMA: Iniciando TaskBuzzerAlarma.Start() y TaskLedAlarma.Start()");
   TaskBuzzerAlarma.Start();
   TaskLedAlarma.Start();
 }
@@ -361,85 +370,14 @@ void onExitAlarma() {
   TaskPMV.Start();
 }
 
-/**
- * @brief Acciones al entrar al estado PMV_ALTO.
- * 
- * Esta función se ejecuta cada vez que el sistema entra en el estado de PMV Alto.
- * Muestra un mensaje en la LCD indicando el PMV alto y activa el ventilador.
- * 
- * @return No retorna ningún valor.
-*/
-void onEnterPMVAlto() {
-  lcd.clear();
-  lcd.print("PMV ALTO!");
-  lcd.setCursor(0, 1);
-  lcd.print("Ventilador ON");
-  Serial.println("-> Estado PMV ALTO! Activando ventilador.");
-  if (stateMachine.GetState() != ALARMA) {
-    digitalWrite(PIN_LED_RED, HIGH);
-  }
-  digitalWrite(PIN_VENTILADOR, HIGH);
-  TaskVentilador.Start();
-  delay(7000);
-}
-
-/**
- * @brief Acciones al salir del estado PMV_ALTO.
- * 
- * Esta función se ejecuta cada vez que el sistema sale del estado de PMV Alto.
- * Apaga el LED rojo y el ventilador si estaban encendidos.
- * 
- * @return No retorna ningún valor.
-*/
-void onExitPMVAlto() {
-  Serial.println("<- Saliendo de PMV Alto. Apagando ventilador (si estaba encendido).");
-  digitalWrite(PIN_LED_RED, LOW);
-  digitalWrite(PIN_VENTILADOR, LOW);
-}
-
-/**
- * @brief Acciones al entrar al estado PMV_BAJO.
- * 
- * Esta función se ejecuta cada vez que el sistema entra en el estado de PMV Bajo.
- * Muestra un mensaje en la LCD indicando el PMV bajo y enciende el LED azul.
- * 
- * @return No retorna ningún valor.
-*/
-void onEnterPMVBajo() {
-  lcd.clear();
-  lcd.print("PMV BAJO!");
-  lcd.setCursor(0, 1);
-  lcd.print("Ambiente Frio");
-  Serial.println("-> Estado PMV BAJO! Ambiente frío.");
-  digitalWrite(PIN_LED_BLUE, HIGH);
-  pmvBajoEnterTime = millis();
-}
-
-/**
- * @brief Acciones al salir del estado PMV_BAJO.
- * 
- * Esta función se ejecuta cada vez que el sistema sale del estado de PMV Bajo.
- * Se encarga de apagar el LED azul.
- * 
- * @return No retorna ningún valor.
-*/
-void onExitPMVBajo() {
-  Serial.println("<- Saliendo de PMV Bajo.");
-  digitalWrite(PIN_LED_BLUE, LOW);
-}
-
-//Setup Function
+// Sección de Función setup() (Inicialización del Arduino)
 void setup() {
   Serial.begin(9600);
   lcd.begin(16, 2);
   dht.begin();
+
   tempValue = dht.readTemperature();
   humidityValue = dht.readHumidity();
-  if (isnan(tempValue) || isnan(humidityValue)) {
-    Serial.println("Initial DHT read failed or returned NAN. Will retry in loop.");
-  } else {
-    Serial.println("Initial DHT read successful.");
-  }
 
   pinMode(PIN_LED_RED, OUTPUT);
   pinMode(PIN_LED_GREEN, OUTPUT);
@@ -456,11 +394,12 @@ void setup() {
 
   SPI.begin();
   mfrc522.PCD_Init();
+
   setupStateMachine();
   stateMachine.SetState(INIT, false, true);
 }
 
-//Main Loop
+// Sección de Función loop() (Bucle Principal del Programa)
 void loop() {
   TaskLuz.Update();
   TaskTemp.Update();
@@ -474,6 +413,7 @@ void loop() {
 
   char key = keypad.getKey();
   Input keypadInput = NINGUNA;
+
   if (key) {
     if (stateMachine.GetState() == INIT) {
       if (pass_idx < sizeof(user_input) - 1) {
@@ -503,10 +443,9 @@ void loop() {
 
   if (currentInput == NINGUNA ||
       (currentInput == PMV_ALTO_DETECTED && stateMachine.GetState() != MONITOREO_AMBIENTAL) ||
-      (currentInput == PMV_BAJO_DETECTED && stateMachine.GetState() != MONITOREO_AMBIENTAL)) {
+      (currentInput == PMV_BAJO_DETECTED && stateMachine.GetState() != MONITOREO_AMBIENTAL) ) {
       currentInput = keypadInput;
   }
-
   stateMachine.Update();
 
   switch (stateMachine.GetState()) {
@@ -534,13 +473,43 @@ void loop() {
   if (keypadInput != NINGUNA) {
       currentInput = NINGUNA;
   }
-
   if (stateMachine.GetState() != PMV_ALTO && stateMachine.GetState() != PMV_BAJO &&
       (currentInput == PMV_ALTO_DETECTED || currentInput == PMV_BAJO_DETECTED)) {
       currentInput = NINGUNA;
   }
 
   delay(50);
+}
+
+// Sección de Función para Obtener Entrada del Teclado (redundante, se maneja en loop)
+Input getInput() {
+  char key = keypad.getKey();
+  if (stateMachine.GetState() == INIT) {
+    if (key) {
+      if (pass_idx < sizeof(user_input) - 1) {
+        lcd.setCursor(pass_idx % 16, 1);
+        lcd.print('*');
+        user_input[pass_idx++] = key;
+        user_input[pass_idx] = '\0';
+      }
+
+      if (pass_idx == strlen(password)) {
+        if (strcmp(password, user_input) == 0) {
+          digitalWrite(PIN_LED_GREEN, HIGH);
+          return CLAVE_CORRECTA;
+        } else {
+          pass_intentos_incorrectos++;
+          if (pass_intentos_incorrectos >= MAX_PASS_INTENTOS) {
+            return INTENTOS_AGOTADOS;
+          }
+          return CLAVE_INCORRECTA;
+        }
+      }
+    }
+  } else if (stateMachine.GetState() == BLOQUEADO && key == '#') {
+    return DESBLOQUEO;
+  }
+  return NINGUNA;
 }
 
 //State Handlers
@@ -552,6 +521,7 @@ void loop() {
  * 
  * @return No retorna ningún valor.
 */
+// Sección de Manejadores de Estado (handle functions)
 void handleInit() {
   if (currentInput == CLAVE_CORRECTA) {
     lcd.clear();
@@ -571,7 +541,6 @@ void handleInit() {
   }
 }
 
-
 /**
  * @brief Maneja la lógica en el estado MONITOREO_AMBIENTAL.
  * 
@@ -586,12 +555,9 @@ void handleMonitoreo() {
 
   if (!sensorsStable && (millis() - monitoreoEnterTime >= SENSOR_STABILIZE_TIME)) {
       sensorsStable = true;
-      Serial.println("DEBUG: Sensors are now considered stable for alarm evaluation.");
   }
-
   if (sensorsStable && (luzValue < 10 || tempValue > 40.0)) {
     if (stateMachine.GetState() != ALARMA) {
-        Serial.println("DEBUG: ALARMA CONDITION MET! Forcing state change to ALARMA.");
         stateMachine.SetState(ALARMA, true, true);
         return;
     }
@@ -602,6 +568,7 @@ void handleMonitoreo() {
 
     lcd.clear();
     lcd.setCursor(0, 0);
+
     lcd.print("L:");
     lcd.print(luzValue);
     lcd.print(" T:");
@@ -613,6 +580,7 @@ void handleMonitoreo() {
     }
 
     lcd.setCursor(0, 1);
+
     lcd.print("H:");
     if (isnan(humidityValue)) {
       lcd.print("Err");
@@ -651,6 +619,7 @@ void handleMonitoreo() {
  * @return No retorna ningún valor.
 */
 void handleBloqueado() {
+  // Este manejador de estado puede estar vacío si la lógica principal se maneja en onEnter/onExit y parpadearLedBloqueado.
 }
 
 /**
@@ -662,54 +631,7 @@ void handleBloqueado() {
  * @return No retorna ningún valor.
 */
 void handleAlarma() {
-}
-
-/**
- * @brief Maneja la lógica en el estado PMV_ALTO.
- * 
- * Esta función se ejecuta mientras el sistema está en el estado de PMV Alto.
- * Actualiza la información del PMV en la pantalla LCD.
- * 
- * @return No retorna ningún valor.
-*/
-void handlePMVAlto() {
-  static unsigned long lastDisplayUpdate = 0;
-  if (millis() - lastDisplayUpdate >= 1000) {
-    lastDisplayUpdate = millis();
-    lcd.setCursor(0, 0);
-    lcd.print("PMV ALTO!");
-    lcd.setCursor(0, 1);
-    lcd.print("PMV: ");
-    if (isnan(pmvValue)) {
-      lcd.print("N/A");
-    } else {
-      lcd.print(pmvValue, 1);
-    }
-  }
-}
-
-/**
- * @brief Maneja la lógica en el estado PMV_BAJO.
- * 
- * Esta función se ejecuta mientras el sistema está en el estado de PMV Bajo.
- * Actualiza la información del PMV en la pantalla LCD.
- * 
- * @return No retorna ningún valor.
-*/
-void handlePMVBajo() {
-  static unsigned long lastDisplayUpdate = 0;
-  if (millis() - lastDisplayUpdate >= 1000) {
-    lastDisplayUpdate = millis();
-    lcd.setCursor(0, 0);
-    lcd.print("PMV BAJO!");
-    lcd.setCursor(0, 1);
-    lcd.print("PMV: ");
-    if (isnan(pmvValue)) {
-      lcd.print("N/A");
-    } else {
-      lcd.print(pmvValue, 1);
-    }
-  }
+  // Este manejador de estado puede estar vacío si la lógica principal se maneja en onEnter/onExit y las tareas asíncronas.
 }
 
 /**
@@ -720,7 +642,7 @@ void handlePMVBajo() {
  * 
  * @return No retorna ningún valor.
 */
-//Sensor Functions
+// Sección de Funciones de Lectura de Sensores
 void readLuz() {
   luzValue = analogRead(PIN_LUZ);
 }
@@ -763,7 +685,6 @@ void readHumidity() {
   }
 }
 
-//PMV Calculation
 /**
  * @brief Calcula el valor PMV (Predicted Mean Vote).
  * 
@@ -774,6 +695,7 @@ void readHumidity() {
  * 
  * @return No retorna ningún valor.
 */
+// Sección de Funciones de Cálculo y Detección
 void calculatePMV() {
   if (currentInput == PMV_ALTO_DETECTED || currentInput == PMV_BAJO_DETECTED) {
     Serial.println("PMV: RFID detected, skipping sensor PMV calculation.");
@@ -803,6 +725,7 @@ void calculatePMV() {
 
   if (bestMatchIndex != -1 && minDistance <= MAX_PMV_MATCH_DISTANCE) {
     pmvValue = PMV_TABLE_VALUE[bestMatchIndex];
+
     if (pmvValue > 1.0) {
       if (stateMachine.GetState() == MONITOREO_AMBIENTAL) {
         currentInput = PMV_ALTO_DETECTED;
@@ -810,7 +733,6 @@ void calculatePMV() {
     } else {
       if (stateMachine.GetState() == PMV_ALTO) {
         currentInput = NINGUNA;
-        Serial.println("DEBUG: PMV no longer ALTO, setting currentInput to NINGUNA.");
       } else {
         currentInput = NINGUNA;
       }
@@ -820,12 +742,10 @@ void calculatePMV() {
     Serial.println("PMV: No close match or out of range, PMV set to NAN.");
     if (stateMachine.GetState() == PMV_ALTO) {
       currentInput = NINGUNA;
-      Serial.println("DEBUG: PMV is NAN, attempting to exit PMV_ALTO state.");
     }
   }
 }
 
-//RFID Functions
 /* *
  * @brief Lee información de tarjetas RFID.
  * 
@@ -841,7 +761,6 @@ void readRFID() {
   }
 
   if (mfrc522.PICC_IsNewCardPresent()) {
-    Serial.println("DEBUG: RFID New Card Present.");
     if (mfrc522.PICC_ReadCardSerial()) {
       Serial.print(F("Card UID:"));
       printArray(mfrc522.uid.uidByte, mfrc522.uid.size);
@@ -897,7 +816,6 @@ void printArray(byte* buffer, byte bufferSize) {
   }
 }
 
-//Helper Functions
 /**
  * @brief Hace parpadear el LED de bloqueo.
  * 
@@ -906,6 +824,7 @@ void printArray(byte* buffer, byte bufferSize) {
  * 
  * @return No retorna ningún valor.
 */
+// Sección de Funciones de Control de LEDs y Buzzer
 void parpadearLedBloqueado() {
   if (stateMachine.GetState() == State::BLOQUEADO) {
     unsigned long currentMillis = millis();
@@ -938,7 +857,6 @@ void encenderLedSeguridad(int pin) {
   digitalWrite(pin, LOW);
 }
 
-//Alarm Functions
 /**
  * @brief Activa el zumbador de alarma con frecuencia variable.
  * 
@@ -968,10 +886,6 @@ void activarBuzzerAlarma() {
         }
       }
       tone(BUZZER_PIN, buzzerFreq);
-      Serial.print("DEBUG ALARMA: Tone activado en pin ");
-      Serial.print(BUZZER_PIN);
-      Serial.print(" con frecuencia: ");
-      Serial.println(buzzerFreq);
     }
   } else {
     noTone(BUZZER_PIN);
@@ -990,6 +904,7 @@ void parpadearLedAlarma() {
   if (stateMachine.GetState() == State::ALARMA) {
     unsigned long currentMillis = millis();
     long interval = ledAlarmaState ? ALARMA_LED_ON_MS : ALARMA_LED_OFF_MS;
+
     if (currentMillis - ledAlarmaBlinkMillis >= interval) {
       ledAlarmaBlinkMillis = currentMillis;
       ledAlarmaState = !ledAlarmaState;
@@ -997,5 +912,110 @@ void parpadearLedAlarma() {
     }
   } else {
     digitalWrite(PIN_LED_RED, LOW);
+  }
+}
+
+// Sección de Funciones "onEnter" para PMV
+void onEnterPMVAlto() {
+  lcd.clear();
+  lcd.print("PMV ALTO!");
+  lcd.setCursor(0, 1);
+  lcd.print("Ventilador ON");
+  Serial.println("-> Estado PMV ALTO! Activando ventilador.");
+
+  if (stateMachine.GetState() != ALARMA) {
+    digitalWrite(PIN_LED_RED, HIGH);
+  }
+
+  digitalWrite(PIN_VENTILADOR, HIGH);
+  TaskVentilador.Start();
+  delay(7000);
+}
+
+/**
+ * @brief Acciones al salir del estado PMV_ALTO.
+ * 
+ * Esta función se ejecuta cada vez que el sistema sale del estado de PMV Alto.
+ * Apaga el LED rojo y el ventilador si estaban encendidos.
+ * 
+ * @return No retorna ningún valor.
+*/
+
+void onExitPMVAlto() {
+  Serial.println("<- Saliendo de PMV Alto. Apagando ventilador (si estaba encendido).");
+  digitalWrite(PIN_LED_RED, LOW);
+  digitalWrite(PIN_VENTILADOR, LOW);
+}
+
+/**
+ * @brief Maneja la lógica en el estado PMV_ALTO.
+ * 
+ * Esta función se ejecuta mientras el sistema está en el estado de PMV Alto.
+ * Actualiza la información del PMV en la pantalla LCD.
+ * 
+ * @return No retorna ningún valor.
+*/
+// Sección de Manejadores de Estado para PMV
+void handlePMVAlto() {
+  static unsigned long lastDisplayUpdate = 0;
+  if (millis() - lastDisplayUpdate >= 1000) {
+    lastDisplayUpdate = millis();
+    lcd.setCursor(0, 0);
+    lcd.print("PMV ALTO!");
+    lcd.setCursor(0, 1);
+    lcd.print("PMV: ");
+    if (isnan(pmvValue)) {
+      lcd.print("N/A");
+    } else {
+      lcd.print(pmvValue, 1);
+    }
+  }
+}
+
+void onEnterPMVBajo() {
+  lcd.clear();
+  lcd.print("PMV BAJO!");
+  lcd.setCursor(0, 1);
+  lcd.print("Ambiente Frio");
+  Serial.println("-> Estado PMV BAJO! Ambiente frío.");
+
+  digitalWrite(PIN_LED_BLUE, HIGH);
+  pmvBajoEnterTime = millis();
+}
+
+/**
+ * @brief Acciones al entrar al estado PMV_BAJO.
+ * 
+ * Esta función se ejecuta cada vez que el sistema entra en el estado de PMV Bajo.
+ * Muestra un mensaje en la LCD indicando el PMV bajo y enciende el LED azul.
+ * 
+ * @return No retorna ningún valor.
+*/
+void onExitPMVBajo() {
+  Serial.println("<- Saliendo de PMV Bajo.");
+  digitalWrite(PIN_LED_BLUE, LOW);
+}
+
+/**
+ * @brief Maneja la lógica en el estado PMV_BAJO.
+ * 
+ * Esta función se ejecuta mientras el sistema está en el estado de PMV Bajo.
+ * Actualiza la información del PMV en la pantalla LCD.
+ * 
+ * @return No retorna ningún valor.
+*/
+void handlePMVBajo() {
+  static unsigned long lastDisplayUpdate = 0;
+  if (millis() - lastDisplayUpdate >= 1000) {
+    lastDisplayUpdate = millis();
+    lcd.setCursor(0, 0);
+    lcd.print("PMV BAJO!");
+    lcd.setCursor(0, 1);
+    lcd.print("PMV: ");
+    if (isnan(pmvValue)) {
+      lcd.print("N/A");
+    } else {
+      lcd.print(pmvValue, 1);
+    }
   }
 }
