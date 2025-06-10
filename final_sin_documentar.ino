@@ -144,7 +144,7 @@ AsyncTask TaskTemp(2000, true, readTemp);
 AsyncTask TaskHumidity(2500, true, readHumidity);
 AsyncTask TaskBuzzerAlarma(100, true, activarBuzzerAlarma);
 AsyncTask TaskLedAlarma(100, true, parpadearLedAlarma);
-AsyncTask TaskPMV(2600, true, calculatePMV); 
+AsyncTask TaskPMV(3000, true, calculatePMV); 
 AsyncTask TaskVentilador(7000, false, []() {
   digitalWrite(PIN_VENTILADOR, LOW);
   Serial.println("Ventilador OFF (AsyncTask)");
