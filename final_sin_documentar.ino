@@ -10,24 +10,13 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
 #define PIN_LED_RED 25
 #define PIN_LED_GREEN 23
 #define PIN_LED_BLUE 24
 #define PIN_LUZ A0
 #define DHTPIN 22
 #define DHTTYPE DHT11
-#define BUZZER_PIN 7  // Pin para el buzzer
+#define BUZZER_PIN 7 
 #define PIN_VENTILADOR 6
 #define PIN_SERVO 10
 
