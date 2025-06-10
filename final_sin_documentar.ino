@@ -589,7 +589,7 @@ void handleMonitoreo() {
       sensorsStable = true;
       Serial.println("DEBUG: Sensors are now considered stable for alarm evaluation.");
   }
-  if (sensorsStable && (luzValue < 100 || tempValue > 40.0)) {
+  if (sensorsStable && (luzValue < 10 || tempValue > 40.0)) {
     if (stateMachine.GetState() != ALARMA) {
         Serial.println("DEBUG: ALARMA CONDITION MET! Forcing state change to ALARMA.");
         stateMachine.SetState(ALARMA, true, true); // 
