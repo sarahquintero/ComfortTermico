@@ -157,6 +157,15 @@ const long ALARMA_LED_ON_MS = 200;
 const long ALARMA_LED_OFF_MS = 100;
 
 //State Machine Setup Function
+/**
+ * @brief Configura las transiciones y callbacks de la máquina de estados.
+ * 
+ * Esta función inicializa y define todas las transiciones posibles entre los diferentes
+ * estados del sistema, así como las funciones que se ejecutan al entrar y salir de cada estado.
+ * Es crucial para el comportamiento general del sistema.
+ * 
+ * @return No retorna ningún valor.
+*/
 void setupStateMachine() {
   stateMachine.AddTransition(INIT, MONITOREO_AMBIENTAL, []() {
     return currentInput == CLAVE_CORRECTA;
@@ -205,6 +214,15 @@ void setupStateMachine() {
 }
 
 //State Enter/Exit Functions
+/**
+ * @brief Acciones al entrar al estado INIT (Inicial).
+ * 
+ * Esta función se ejecuta cada vez que el sistema entra en el estado de inicialización.
+ * Se encarga de limpiar la pantalla LCD, mostrar el mensaje de bienvenida y resetea
+ * las variables relacionadas con la entrada de la clave de acceso.
+ * 
+ * @return No retorna ningún valor.
+*/
 void onEnterInit() {
   lcd.clear();
   lcd.print("Ingrese clave:");
@@ -221,9 +239,26 @@ void onEnterInit() {
   alarm_entry_count = 0;
 }
 
+/**
+ * @brief Acciones al salir del estado INIT (Inicial).
+ * 
+ * Esta función se ejecuta cada vez que el sistema sale del estado de inicialización.
+ * 
+ * @return No retorna ningún valor.
+*/
 void onExitInit() {
   Serial.println("<- Saliendo de Init");
 }
+
+/**
+ * @brief Acciones al entrar al estado MONITOREO_AMBIENTAL.
+ * 
+ * Esta función se ejecuta cada vez que el sistema entra en el estado de monitoreo ambiental.
+ * Activa las tareas de lectura de sensores (luz, temperatura, humedad y PMV) y enciende
+ * el LED verde para indicar el monitoreo activo.
+ * 
+ * @return No retorna ningún valor.
+*/
 
 void onEnterMonitoreo() {
   TaskVentilador.Stop();
@@ -239,11 +274,28 @@ void onEnterMonitoreo() {
   sensorsStable = false;
 }
 
+/**
+ * @brief Acciones al salir del estado MONITOREO_AMBIENTAL.
+ * 
+ * Esta función se ejecuta cada vez que el sistema sale del estado de monitoreo ambiental.
+ * Se encarga de apagar el LED verde que indica el monitoreo.
+ * 
+ * @return No retorna ningún valor.
+*/
 void onExitMonitoreo() {
   Serial.println("<- Saliendo de Monitoreo");
   digitalWrite(PIN_LED_GREEN, LOW);
 }
 
+/**
+ * @brief Acciones al entrar al estado BLOQUEADO.
+ * 
+ * Esta función se ejecuta cada vez que el sistema entra en el estado bloqueado.
+ * Muestra un mensaje en la LCD indicando que el sistema está bloqueado y las
+ * instrucciones para desbloquearlo.
+ * 
+ * @return No retorna ningún valor.
+*/
 void onEnterBloqueado() {
   lcd.clear();
   lcd.print("Sistema bloqueado");
@@ -253,12 +305,29 @@ void onEnterBloqueado() {
   bloqueo_led_millis = millis();
 }
 
+/**
+ * @brief Acciones al salir del estado BLOQUEADO.
+ * 
+ * Esta función se ejecuta cada vez que el sistema sale del estado bloqueado.
+ * Se encarga de apagar el LED rojo de bloqueo y resetear el contador de intentos.
+ * 
+ * @return No retorna ningún valor.
+*/
 void onExitBloqueado() {
   Serial.println("<- Saliendo de Bloqueado");
   digitalWrite(PIN_LED_RED, LOW);
   pass_intentos_incorrectos = 0;
 }
 
+/**
+ * @brief Acciones al entrar al estado ALARMA.
+ * 
+ * Esta función se ejecuta cada vez que el sistema entra en el estado de alarma.
+ * Muestra un mensaje de advertencia en la LCD, inicia el zumbador y el parpadeo del LED
+ * de alarma, y registra el número de veces que se ha activado la alarma.
+ * 
+ * @return No retorna ningún valor.
+*/
 void onEnterAlarma() {
   lcd.clear();
   lcd.print("!!! ALARMA !!!");
@@ -272,6 +341,15 @@ void onEnterAlarma() {
   TaskLedAlarma.Start();
 }
 
+/**
+ * @brief Acciones al salir del estado ALARMA.
+ * 
+ * Esta función se ejecuta cada vez que el sistema sale del estado de alarma.
+ * Detiene el zumbador y el parpadeo del LED de alarma, y reinicia las tareas
+ * de lectura de sensores.
+ * 
+ * @return No retorna ningún valor.
+*/
 void onExitAlarma() {
   Serial.println("<- Saliendo de Alarma");
   noTone(BUZZER_PIN);
@@ -283,6 +361,14 @@ void onExitAlarma() {
   TaskPMV.Start();
 }
 
+/**
+ * @brief Acciones al entrar al estado PMV_ALTO.
+ * 
+ * Esta función se ejecuta cada vez que el sistema entra en el estado de PMV Alto.
+ * Muestra un mensaje en la LCD indicando el PMV alto y activa el ventilador.
+ * 
+ * @return No retorna ningún valor.
+*/
 void onEnterPMVAlto() {
   lcd.clear();
   lcd.print("PMV ALTO!");
@@ -297,12 +383,28 @@ void onEnterPMVAlto() {
   delay(7000);
 }
 
+/**
+ * @brief Acciones al salir del estado PMV_ALTO.
+ * 
+ * Esta función se ejecuta cada vez que el sistema sale del estado de PMV Alto.
+ * Apaga el LED rojo y el ventilador si estaban encendidos.
+ * 
+ * @return No retorna ningún valor.
+*/
 void onExitPMVAlto() {
   Serial.println("<- Saliendo de PMV Alto. Apagando ventilador (si estaba encendido).");
   digitalWrite(PIN_LED_RED, LOW);
   digitalWrite(PIN_VENTILADOR, LOW);
 }
 
+/**
+ * @brief Acciones al entrar al estado PMV_BAJO.
+ * 
+ * Esta función se ejecuta cada vez que el sistema entra en el estado de PMV Bajo.
+ * Muestra un mensaje en la LCD indicando el PMV bajo y enciende el LED azul.
+ * 
+ * @return No retorna ningún valor.
+*/
 void onEnterPMVBajo() {
   lcd.clear();
   lcd.print("PMV BAJO!");
@@ -313,6 +415,14 @@ void onEnterPMVBajo() {
   pmvBajoEnterTime = millis();
 }
 
+/**
+ * @brief Acciones al salir del estado PMV_BAJO.
+ * 
+ * Esta función se ejecuta cada vez que el sistema sale del estado de PMV Bajo.
+ * Se encarga de apagar el LED azul.
+ * 
+ * @return No retorna ningún valor.
+*/
 void onExitPMVBajo() {
   Serial.println("<- Saliendo de PMV Bajo.");
   digitalWrite(PIN_LED_BLUE, LOW);
@@ -434,6 +544,14 @@ void loop() {
 }
 
 //State Handlers
+/**
+ * @brief Maneja la lógica en el estado INIT.
+ * 
+ * Esta función se encarga de procesar la entrada de la clave de usuario
+ * y determinar si es correcta, incorrecta o si se han agotado los intentos.
+ * 
+ * @return No retorna ningún valor.
+*/
 void handleInit() {
   if (currentInput == CLAVE_CORRECTA) {
     lcd.clear();
@@ -453,6 +571,16 @@ void handleInit() {
   }
 }
 
+
+/**
+ * @brief Maneja la lógica en el estado MONITOREO_AMBIENTAL.
+ * 
+ * Esta función actualiza la pantalla LCD con los valores de los sensores
+ * (luz, temperatura, humedad y PMV) y evalúa si se cumplen las condiciones
+ * para activar una alarma.
+ * 
+ * @return No retorna ningún valor.
+*/
 void handleMonitoreo() {
   static unsigned long lastUpdate = 0;
 
@@ -513,12 +641,37 @@ void handleMonitoreo() {
   }
 }
 
+/**
+ * @brief Maneja la lógica en el estado BLOQUEADO.
+ * 
+ * Esta función se ejecuta continuamente mientras el sistema está en el
+ * estado bloqueado. Su principal tarea es mantener el LED de bloqueo
+ * parpadeando.
+ * 
+ * @return No retorna ningún valor.
+*/
 void handleBloqueado() {
 }
 
+/**
+ * @brief Maneja la lógica en el estado ALARMA.
+ * 
+ * Esta función se ejecuta continuamente mientras el sistema está en el estado
+ * de alarma. Se encarga de coordinar el zumbador y el parpadeo del LED de alarma.
+ * 
+ * @return No retorna ningún valor.
+*/
 void handleAlarma() {
 }
 
+/**
+ * @brief Maneja la lógica en el estado PMV_ALTO.
+ * 
+ * Esta función se ejecuta mientras el sistema está en el estado de PMV Alto.
+ * Actualiza la información del PMV en la pantalla LCD.
+ * 
+ * @return No retorna ningún valor.
+*/
 void handlePMVAlto() {
   static unsigned long lastDisplayUpdate = 0;
   if (millis() - lastDisplayUpdate >= 1000) {
@@ -535,6 +688,14 @@ void handlePMVAlto() {
   }
 }
 
+/**
+ * @brief Maneja la lógica en el estado PMV_BAJO.
+ * 
+ * Esta función se ejecuta mientras el sistema está en el estado de PMV Bajo.
+ * Actualiza la información del PMV en la pantalla LCD.
+ * 
+ * @return No retorna ningún valor.
+*/
 void handlePMVBajo() {
   static unsigned long lastDisplayUpdate = 0;
   if (millis() - lastDisplayUpdate >= 1000) {
@@ -551,11 +712,28 @@ void handlePMVBajo() {
   }
 }
 
+/**
+ * @brief Lee el valor del sensor de luz.
+ * 
+ * Esta función realiza una lectura analógica del pin conectado al sensor de luz
+ * y actualiza la variable global `luzValue` con el valor obtenido.
+ * 
+ * @return No retorna ningún valor.
+*/
 //Sensor Functions
 void readLuz() {
   luzValue = analogRead(PIN_LUZ);
 }
 
+/**
+ * @brief Lee la temperatura del sensor DHT11.
+ * 
+ * Esta función solicita una lectura de temperatura al sensor DHT11. Si la lectura
+ * es exitosa, actualiza la variable global `tempValue`. En caso de fallo,
+ * establece `tempValue` como `NAN` (Not a Number).
+ * 
+ * @return No retorna ningún valor.
+*/
 void readTemp() {
   float t = dht.readTemperature();
   if (isnan(t)) {
@@ -566,6 +744,15 @@ void readTemp() {
   }
 }
 
+/**
+ * @brief Lee la humedad del sensor DHT11.
+ * 
+ * Esta función solicita una lectura de humedad al sensor DHT11. Si la lectura
+ * es exitosa, actualiza la variable global `humidityValue`. En caso de fallo,
+ * establece `humidityValue` como `NAN`.
+ * 
+ * @return No retorna ningún valor.
+*/
 void readHumidity() {
   float h = dht.readHumidity();
   if (isnan(h)) {
@@ -577,6 +764,16 @@ void readHumidity() {
 }
 
 //PMV Calculation
+/**
+ * @brief Calcula el valor PMV (Predicted Mean Vote).
+ * 
+ * Esta función calcula el valor PMV basándose en las lecturas actuales de
+ * temperatura y humedad. Busca la combinación más cercana en una tabla predefinida
+ * y asigna el valor PMV correspondiente. Si el PMV calculado es alto,
+ * establece la entrada para una posible transición de estado.
+ * 
+ * @return No retorna ningún valor.
+*/
 void calculatePMV() {
   if (currentInput == PMV_ALTO_DETECTED || currentInput == PMV_BAJO_DETECTED) {
     Serial.println("PMV: RFID detected, skipping sensor PMV calculation.");
@@ -629,6 +826,15 @@ void calculatePMV() {
 }
 
 //RFID Functions
+/* *
+ * @brief Lee información de tarjetas RFID.
+ * 
+ * Esta función detecta si una nueva tarjeta RFID está presente y lee su UID.
+ * Si el UID coincide con tarjetas predefinidas (tarjetaPMVBajo o llaveroPMVAlto),
+ * establece la entrada correspondiente para la máquina de estados.
+ *
+ * @return No retorna ningún valor.
+*/
 void readRFID() {
   if (stateMachine.GetState() != MONITOREO_AMBIENTAL) {
     return;
@@ -655,6 +861,18 @@ void readRFID() {
   }
 }
 
+/**
+ * @brief Compara dos arreglos de bytes.
+ * 
+ * Esta función compara los contenidos de dos arreglos de bytes para determinar
+ * si son idénticos en la longitud especificada.
+ * 
+ * @param arrayA Puntero al primer arreglo de bytes.
+ * @param arrayB Puntero al segundo arreglo de bytes.
+ * @param length Longitud de los arreglos a comparar.
+ * @return true Si ambos arreglos son idénticos hasta la longitud especificada.
+ * @return false Si los arreglos difieren en cualquier posición o no tienen la misma longitud efectiva.
+*/
 bool isEqualArray(byte* arrayA, byte* arrayB, int length) {
   for (int index = 0; index < length; index++) {
     if (arrayA[index] != arrayB[index]) return false;
@@ -662,6 +880,16 @@ bool isEqualArray(byte* arrayA, byte* arrayB, int length) {
   return true;
 }
 
+/**
+ * @brief Imprime un arreglo de bytes en el monitor serial.
+ * 
+ * Esta función recorre un arreglo de bytes e imprime cada byte en formato
+ * hexadecimal en el monitor serial, útil para depuración de UIDs de RFID.
+ * 
+ * @param buffer Puntero al arreglo de bytes a imprimir.
+ * @param bufferSize Tamaño del arreglo de bytes.
+ * @return No retorna ningún valor.
+*/
 void printArray(byte* buffer, byte bufferSize) {
   for (byte i = 0; i < bufferSize; i++) {
     Serial.print(buffer[i] < 0x10 ? " 0" : " ");
@@ -670,6 +898,14 @@ void printArray(byte* buffer, byte bufferSize) {
 }
 
 //Helper Functions
+/**
+ * @brief Hace parpadear el LED de bloqueo.
+ * 
+ * Esta función controla el parpadeo del LED rojo cuando el sistema está
+ * en el estado BLOQUEADO, alternando entre encendido y apagado a intervalos definidos.
+ * 
+ * @return No retorna ningún valor.
+*/
 void parpadearLedBloqueado() {
   if (stateMachine.GetState() == State::BLOQUEADO) {
     unsigned long currentMillis = millis();
@@ -686,13 +922,32 @@ void parpadearLedBloqueado() {
   }
 }
 
+/**
+ * @brief Enciende momentáneamente un LED de seguridad.
+ * 
+ * Esta función enciende un LED específico durante un breve periodo (1 segundo)
+ * y luego lo apaga, utilizado para indicaciones visuales rápidas, como una
+ * clave incorrecta.
+ * 
+ * @param pin El número del pin del LED a encender.
+ * @return No retorna ningún valor.
+*/
 void encenderLedSeguridad(int pin) {
   digitalWrite(pin, HIGH);
   delay(1000);
   digitalWrite(pin, LOW);
 }
 
-Alarm Functions
+//Alarm Functions
+/**
+ * @brief Activa el zumbador de alarma con frecuencia variable.
+ * 
+ * Esta función genera un sonido de alarma en el zumbador. La frecuencia
+ * del sonido varía de forma cíclica entre un mínimo y un máximo, creando
+ * un efecto de sirena. Solo se activa si el sistema está en el estado ALARMA.
+ * 
+ * @return No retorna ningún valor.
+*/
 void activarBuzzerAlarma() {
   if (stateMachine.GetState() == State::ALARMA) {
     unsigned long currentMillis = millis();
@@ -723,6 +978,14 @@ void activarBuzzerAlarma() {
   }
 }
 
+/**
+ * @brief Hace parpadear el LED de alarma.
+ * 
+ * Esta función controla el parpadeo del LED rojo cuando el sistema está
+ * en el estado ALARMA, alternando entre encendido y apagado a intervalos definidos.
+ * 
+ * @return No retorna ningún valor.
+*/
 void parpadearLedAlarma() {
   if (stateMachine.GetState() == State::ALARMA) {
     unsigned long currentMillis = millis();
