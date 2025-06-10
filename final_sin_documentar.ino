@@ -30,22 +30,6 @@ MFRC522 mfrc522(SS_PIN, RST_PIN);
 
 const int rs = 12, en = 11, d4 = 5, d5 = 4, d6 = 3, d7 = 2;
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 const byte ROWS = 4;
 const byte COLS = 4;
 char keys[ROWS][COLS] = {
@@ -258,9 +242,8 @@ void setupStateMachine() {
 
 
   stateMachine.AddTransition(MONITOREO_AMBIENTAL, ALARMA, []() {
-    return sensorsStable && (luzValue < 100 || tempValue > 40.0);  
+    return sensorsStable && (luzValue < 10 || tempValue > 40.0);  
   });
-
 
 
   stateMachine.AddTransition(ALARMA, MONITOREO_AMBIENTAL, []() {
@@ -398,7 +381,7 @@ void onEnterAlarma() {
   alarm_entry_count++;
   Serial.print("Alarmas activadas: ");
   Serial.println(alarm_entry_count);
-  Serial.println("DEBUG ALARMA: Iniciando TaskBuzzerAlarma.Start() y TaskLedAlarma.Start()"); 
+  //Serial.println("DEBUG ALARMA: Iniciando TaskBuzzerAlarma.Start() y TaskLedAlarma.Start()"); 
   TaskBuzzerAlarma.Start();
   TaskLedAlarma.Start(); 
 }
@@ -424,9 +407,9 @@ void setup() {
   tempValue = dht.readTemperature();
   humidityValue = dht.readHumidity();
   if (isnan(tempValue) || isnan(humidityValue)) {
-      Serial.println("Initial DHT read failed or returned NAN. Will retry in loop.");
+      //Serial.println("Initial DHT read failed or returned NAN. Will retry in loop.");
   } else {
-      Serial.println("Initial DHT read successful.");
+      //Serial.println("Initial DHT read successful.");
   }
 
   pinMode(PIN_LED_RED, OUTPUT);
@@ -450,12 +433,14 @@ void setup() {
 }
 
 void loop() {
+  
   TaskLuz.Update();
   TaskTemp.Update();
   TaskHumidity.Update();
   TaskPMV.Update(); 
   readRFID();   
 
+  
   TaskBuzzerAlarma.Update();
   TaskLedAlarma.Update();
   TaskVentilador.Update();
@@ -587,11 +572,11 @@ void handleMonitoreo() {
 
   if (!sensorsStable && (millis() - monitoreoEnterTime >= SENSOR_STABILIZE_TIME)) {
       sensorsStable = true;
-      Serial.println("DEBUG: Sensors are now considered stable for alarm evaluation.");
+      //Serial.println("DEBUG: Sensors are now considered stable for alarm evaluation.");
   }
   if (sensorsStable && (luzValue < 10 || tempValue > 40.0)) {
     if (stateMachine.GetState() != ALARMA) {
-        Serial.println("DEBUG: ALARMA CONDITION MET! Forcing state change to ALARMA.");
+        //Serial.println("DEBUG: ALARMA CONDITION MET! Forcing state change to ALARMA.");
         stateMachine.SetState(ALARMA, true, true); // 
         return;
     }
@@ -733,7 +718,7 @@ void calculatePMV() {
     } else {  
       if (stateMachine.GetState() == PMV_ALTO) {
         currentInput = NINGUNA;
-        Serial.println("DEBUG: PMV no longer ALTO, setting currentInput to NINGUNA.");
+        //Serial.println("DEBUG: PMV no longer ALTO, setting currentInput to NINGUNA.");
       } else {
         currentInput = NINGUNA;
       }
@@ -743,7 +728,7 @@ void calculatePMV() {
     Serial.println("PMV: No close match or out of range, PMV set to NAN.");
     if (stateMachine.GetState() == PMV_ALTO) {
       currentInput = NINGUNA;
-      Serial.println("DEBUG: PMV is NAN, attempting to exit PMV_ALTO state.");
+      //Serial.println("DEBUG: PMV is NAN, attempting to exit PMV_ALTO state.");
     }
   }
 }
@@ -756,7 +741,7 @@ void readRFID() {
   }
 
   if (mfrc522.PICC_IsNewCardPresent()) {
-    Serial.println("DEBUG: RFID New Card Present.");  
+    //Serial.println("DEBUG: RFID New Card Present.");  
     if (mfrc522.PICC_ReadCardSerial()) {
       Serial.print(F("Card UID:"));
       printArray(mfrc522.uid.uidByte, mfrc522.uid.size);
@@ -860,10 +845,10 @@ void activarBuzzerAlarma() {
         }
       }
       tone(BUZZER_PIN, buzzerFreq);
-      Serial.print("DEBUG ALARMA: Tone activado en pin "); 
-      Serial.print(BUZZER_PIN);
-      Serial.print(" con frecuencia: ");
-      Serial.println(buzzerFreq);
+      //Serial.print("DEBUG ALARMA: Tone activado en pin "); 
+      //Serial.print(BUZZER_PIN);
+      //Serial.print(" con frecuencia: ");
+      //Serial.println(buzzerFreq);
     }
   } else {
     noTone(BUZZER_PIN); 
